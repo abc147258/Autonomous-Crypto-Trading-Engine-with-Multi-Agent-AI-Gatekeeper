@@ -56,13 +56,13 @@ An automated cryptocurrency trading system powered by Claude AI for market analy
                        │
 ┌──────────────────────▼──────────────────────┐
 │              Orchestration                   │
-│         bot\_controller.py                    │
+│         bot\\\_controller.py                    │
 │         (start/stop bot.py)                  │
 └──────────────────────┬──────────────────────┘
                        │
 ┌──────────────────────▼──────────────────────┐
 │              Trading Bot                     │
-│  bot.py → ai\_analyzer.py → binance\_client   │
+│  bot.py → ai\\\_analyzer.py → binance\\\_client   │
 └─────────────────────────────────────────────┘
 ```
 
@@ -73,16 +73,16 @@ An automated cryptocurrency trading system powered by Claude AI for market analy
 ```
 auto2/
 ├── bot.py              # Main trading loop
-├── ai\_analyzer.py      # Two-stage AI pipeline (Haiku + Sonnet)
+├── ai\\\_analyzer.py      # Two-stage AI pipeline (Haiku + Sonnet)
 ├── signals.py          # Rule-based signal scoring (10 indicators)
-├── lesson\_engine.py    # AI learning system
+├── lesson\\\_engine.py    # AI learning system
 ├── indicators.py       # Technical indicators (RSI, MACD, BB, EMA, ATR)
-├── binance\_client.py   # Binance API wrapper
-├── fear\_greed.py       # Fear \& Greed Index (1h cache)
+├── binance\\\_client.py   # Binance API wrapper
+├── fear\\\_greed.py       # Fear \\\& Greed Index (1h cache)
 ├── notifier.py         # Signal analysis (lite/full mode)
-├── crypto\_notifier.py  # HTML email notifications
-├── signal\_writer.py    # Writes signal.json
-├── bot\_controller.py   # Start/stop bot automatically
+├── crypto\\\_notifier.py  # HTML email notifications
+├── signal\\\_writer.py    # Writes signal.json
+├── bot\\\_controller.py   # Start/stop bot automatically
 ├── scheduler.py        # Runs notifier on schedule
 ├── backtest.py         # Backtest script (No Signal vs With Signal)
 ├── config.py           # Reads config from .env
@@ -114,12 +114,12 @@ cp .env.example .env
 Edit `.env` with your real values:
 
 ```env
-BINANCE\_API\_KEY=your\_key\_here
-BINANCE\_SECRET\_KEY=your\_secret\_here
-ANTHROPIC\_API\_KEY=sk-ant-...
-EMAIL\_SENDER=your@gmail.com
-EMAIL\_PASSWORD=xxxx xxxx xxxx xxxx
-EMAIL\_RECEIVER=your@gmail.com
+BINANCE\\\_API\\\_KEY=your\\\_key\\\_here
+BINANCE\\\_SECRET\\\_KEY=your\\\_secret\\\_here
+ANTHROPIC\\\_API\\\_KEY=sk-ant-...
+EMAIL\\\_SENDER=your@gmail.com
+EMAIL\\\_PASSWORD=xxxx xxxx xxxx xxxx
+EMAIL\\\_RECEIVER=your@gmail.com
 ```
 
 ### 3\. Test configuration
@@ -139,7 +139,7 @@ Open 2 terminals simultaneously:
 python scheduler.py
 
 # Terminal 2 — Bot Controller
-python bot\_controller.py
+python bot\\\_controller.py
 ```
 
 `bot.py` will be automatically started/stopped based on signals from the notifier.
@@ -150,17 +150,17 @@ python bot\_controller.py
 
 |Variable|Default|Description|
 |-|-|-|
-|`TRADING\_PAIRS`|7 pairs|Coins to trade|
-|`CANDLE\_INTERVAL`|4h|Primary timeframe|
-|`SCAN\_INTERVAL\_SECONDS`|900|Scan frequency in seconds|
-|`TAKE\_PROFIT\_PCT`|8.0|TP % (fallback)|
-|`STOP\_LOSS\_PCT`|4.0|SL % (fallback)|
-|`MAX\_OPEN\_TRADES`|7|Maximum simultaneous positions|
-|`MIN\_BUY\_CONFIDENCE`|65|Minimum confidence to buy|
-|`PORTFOLIO\_STOP\_LOSS\_PCT`|15.0|Stop system if DD exceeds %|
-|`LIMIT\_ORDER\_SLIPPAGE\_PCT`|0.1|Limit order below market %|
-|`LIMIT\_ORDER\_TIMEOUT\_S`|30|Timeout before fallback|
-|`MAX\_DAILY\_LOSS\_PCT`|5.0|Stop new positions if loss exceeds %|
+|`TRADING\\\_PAIRS`|7 pairs|Coins to trade|
+|`CANDLE\\\_INTERVAL`|4h|Primary timeframe|
+|`SCAN\\\_INTERVAL\\\_SECONDS`|900|Scan frequency in seconds|
+|`TAKE\\\_PROFIT\\\_PCT`|8.0|TP % (fallback)|
+|`STOP\\\_LOSS\\\_PCT`|4.0|SL % (fallback)|
+|`MAX\\\_OPEN\\\_TRADES`|7|Maximum simultaneous positions|
+|`MIN\\\_BUY\\\_CONFIDENCE`|65|Minimum confidence to buy|
+|`PORTFOLIO\\\_STOP\\\_LOSS\\\_PCT`|15.0|Stop system if DD exceeds %|
+|`LIMIT\\\_ORDER\\\_SLIPPAGE\\\_PCT`|0.1|Limit order below market %|
+|`LIMIT\\\_ORDER\\\_TIMEOUT\\\_S`|30|Timeout before fallback|
+|`MAX\\\_DAILY\\\_LOSS\\\_PCT`|5.0|Stop new positions if loss exceeds %|
 
 \---
 
@@ -174,7 +174,7 @@ python bot\_controller.py
 5. Indicators interesting?   → If not → HOLD (skip Sonnet)
 6. Sonnet analyzes           → BUY/SELL/HOLD + TP/SL/Trailing
 7. conf >= 65%?              → Calculate position size
-8. F\&G > 15?                 → Send limit order
+8. F\\\&G > 15?                 → Send limit order
 9. Limit order filled?       → Set dynamic TP/SL/Trailing
 ```
 
@@ -203,7 +203,7 @@ python backtest.py
 Best result: **High\_Conf\_WithSignal**
 
 * ATR\_TP=4.4 | ATR\_SL=2.5 | CONF=0.65
-* ROI = +112.50% | Win Rate = 43.5% | Trades = 588
+* 
 
 \---
 
