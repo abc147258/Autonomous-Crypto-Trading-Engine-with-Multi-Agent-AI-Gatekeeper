@@ -1,0 +1,29 @@
+# ============================================================
+# requirements.txt — Python dependencies
+# pip install -r requirements.txt
+# ============================================================
+
+# Binance API
+python-binance==1.0.19
+
+# Anthropic Claude AI
+anthropic>=0.30.0
+
+# Data processing
+pandas>=2.0.0
+numpy>=1.24.0
+
+# HTTP requests
+requests>=2.31.0
+
+# RSS news feed
+feedparser>=6.0.10
+
+# Scheduling
+schedule>=1.2.0
+
+# Environment variables
+python-dotenv>=1.0.0
+
+# Email (built-in smtplib — ไม่ต้องติดตั้งเพิ่ม)
+# Whale Alert (ใช้ requests แล้ว)

@@ -1,0 +1,54 @@
+# ============================================================
+# .gitignore — ห้าม push ไฟล์เหล่านี้ขึ้น GitHub
+# ============================================================
+
+# ─── Secret / Config ───────────────────────────────────────
+.env
+*.key
+*.pem
+
+# ─── Runtime files ─────────────────────────────────────────
+state.json
+state_backup.json
+bot.stop
+lessons.json
+
+# ─── Logs ──────────────────────────────────────────────────
+*.log
+logs/
+
+# ─── Backtest output ───────────────────────────────────────
+backtest_results.json
+backtest_results.csv
+backtest_comparison.csv
+equity_curve.csv
+backtest_*.csv
+
+# ─── Python ────────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+*.egg-info/
+dist/
+build/
+.eggs/
+
+# ─── Virtual env ───────────────────────────────────────────
+venv/
+.venv/
+env/
+ENV/
+
+# ─── IDE ───────────────────────────────────────────────────
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+
+# ─── Docs ──────────────────────────────────────────────────
+resume_*.docx
+*.zip
