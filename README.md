@@ -1,40 +1,46 @@
 # 🤖 AI Crypto Trading Bot
 
-ระบบเทรด cryptocurrency อัตโนมัติที่ใช้ Claude AI วิเคราะห์ตลาดและตัดสินใจซื้อขาย รองรับ 7 คู่เหรียญบน Binance พร้อมระบบ risk management ครบถ้วน
+An automated cryptocurrency trading system powered by Claude AI for market analysis and trade decisions. Supports 7 trading pairs on Binance with comprehensive risk management.
 
 ---
 
 ## ✨ Features
 
 ### Two-Stage AI Pipeline
-- **Haiku** — กรองข่าวจาก RSS feeds ทุก 30 นาที ประหยัด token
-- **Sonnet** — วิเคราะห์ indicators + ข่าว และกำหนด TP/SL/Trailing แบบ dynamic
+- **Haiku** — Filters news from RSS feeds every 30 minutes, saving tokens
+- **Sonnet** — Analyzes indicators + news and dynamically sets TP/SL/Trailing
 
 ### Smart Signal System
-- Lite check ทุก 1 ชั่วโมง — ตรวจ indicators ไม่เรียก AI
-- Full check วันละ 3 ครั้ง (08:00, 16:00, 00:00) — วิเคราะห์ครบทุกด้าน
-- Dead vol detection — หยุด bot อัตโนมัติเมื่อตลาดนิ่ง
+- Lite check every 1 hour — checks indicators without calling AI
+- Full check 3 times per day (08:00, 16:00, 00:00) — comprehensive analysis
+- Dead vol detection — automatically stops bot when market is inactive
 
-### Risk Management ครบถ้วน
-- **Position sizing by confidence** — Sonnet มั่นใจมากลงเงินมาก (0.5x–2.0x)
-- **Dynamic TP/SL** — คำนวณจาก ATR ตามสภาพตลาดจริง
-- **Dynamic trailing stop** — Sonnet กำหนด activate/distance เอง
-- **Daily loss limit** — หยุดเปิดใหม่ถ้าขาดทุนเกิน 5%/วัน
-- **Portfolio stop loss** — หยุดทั้งระบบถ้า drawdown เกิน 15%
-- **Fear & Greed filter** — ไม่ซื้อตอน Extreme Fear (F&G <= 15)
+### Comprehensive Risk Management
+- **Position sizing by confidence** — Higher Sonnet confidence = larger position (0.5x–2.0x)
+- **Dynamic TP/SL** — Calculated from ATR based on real market conditions
+- **Dynamic trailing stop** — Sonnet determines activate/distance automatically
+- **Daily loss limit** — Stops opening new positions if daily loss exceeds 5%
+- **Portfolio stop loss** — Stops entire system if drawdown exceeds 15%
+- **Fear & Greed filter** — No buying during Extreme Fear (F&G <= 15)
 
 ### Performance Tracking
-- บันทึก win rate แยกตาม confidence band (55–64%, 65–74%, 75–84%, 85%+)
-- แยกตาม market regime (BULL, BEAR, SIDEWAYS, HIGH_VOL)
-- แยกตาม exit type (TP, SL, TRAIL_TP, TRAIL_SL, AI_SELL)
+- Records win rate by confidence band (55–64%, 65–74%, 75–84%, 85%+)
+- Breakdown by market regime (BULL, BEAR, SIDEWAYS, HIGH_VOL)
+- Breakdown by exit type (TP, SL, TRAIL_TP, TRAIL_SL, AI_SELL)
 
 ### Limit Order Protection
-- พยายามซื้อด้วย limit order ก่อน (ต่ำกว่าตลาด 0.1%)
-- timeout 30 วินาที → fallback market order อัตโนมัติ
+- Attempts limit order first (0.1% below market price)
+- 30-second timeout → automatic fallback to market order
+
+### AI Learning System
+- Learns from losing trades using Haiku analysis
+- Identifies patterns that caused losses
+- Sends analytical context to Sonnet — learning, not avoiding
+- Automatically adjusts signal weights based on loss history
 
 ---
 
-## 🏗️ สถาปัตยกรรมระบบ
+## 🏗️ System Architecture
 
 ```
 ┌─────────────────────────────────────────────┐
@@ -56,23 +62,26 @@
 
 ---
 
-## 📁 โครงสร้างไฟล์
+## 📁 File Structure
 
 ```
-autob/
+auto2/
 ├── bot.py              # Main trading loop
 ├── ai_analyzer.py      # Two-stage AI pipeline (Haiku + Sonnet)
+├── signals.py          # Rule-based signal scoring (10 indicators)
+├── lesson_engine.py    # AI learning system
 ├── indicators.py       # Technical indicators (RSI, MACD, BB, EMA, ATR)
 ├── binance_client.py   # Binance API wrapper
-├── fear_greed.py       # Fear & Greed Index (cache 1h)
+├── fear_greed.py       # Fear & Greed Index (1h cache)
 ├── notifier.py         # Signal analysis (lite/full mode)
-├── signal_writer.py    # เขียน signal.json
-├── bot_controller.py   # Start/stop bot อัตโนมัติ
-├── scheduler.py        # รัน notifier ตาม schedule
-├── backtest.py         # Backtest script
-├── config.py           # อ่าน config จาก .env
-├── .env                # API keys (ห้าม commit!)
-├── .env.example        # Template สำหรับ setup
+├── crypto_notifier.py  # HTML email notifications
+├── signal_writer.py    # Writes signal.json
+├── bot_controller.py   # Start/stop bot automatically
+├── scheduler.py        # Runs notifier on schedule
+├── backtest.py         # Backtest script (No Signal vs With Signal)
+├── config.py           # Reads config from .env
+├── .env                # API keys (never commit!)
+├── .env.example        # Template for setup
 ├── .gitignore
 ├── requirements.txt
 └── README.md
@@ -80,23 +89,23 @@ autob/
 
 ---
 
-## 🚀 การติดตั้ง
+## 🚀 Installation
 
-### 1. Clone และติดตั้ง dependencies
+### 1. Clone and install dependencies
 
 ```bash
-git clone https://github.com/yourusername/autob.git
-cd autob
+git clone https://github.com/yourusername/auto2.git
+cd auto2
 pip install -r requirements.txt
 ```
 
-### 2. ตั้งค่า .env
+### 2. Configure .env
 
 ```bash
 cp .env.example .env
 ```
 
-แก้ไขไฟล์ `.env` ใส่ค่าจริง:
+Edit `.env` with your real values:
 
 ```env
 BINANCE_API_KEY=your_key_here
@@ -107,19 +116,17 @@ EMAIL_PASSWORD=xxxx xxxx xxxx xxxx
 EMAIL_RECEIVER=your@gmail.com
 ```
 
-### 3. ทดสอบ config
+### 3. Test configuration
 
 ```bash
 python config.py
 ```
 
-ถ้าขึ้น `✅ config โหลดสำเร็จ` แสดงว่าพร้อมใช้งาน
-
 ---
 
-## ▶️ วิธีรัน
+## ▶️ Running the Bot
 
-เปิด 2 terminal พร้อมกัน:
+Open 2 terminals simultaneously:
 
 ```bash
 # Terminal 1 — Signal System
@@ -129,105 +136,100 @@ python scheduler.py
 python bot_controller.py
 ```
 
-bot.py จะถูก start/stop อัตโนมัติตาม signal จาก notifier
+`bot.py` will be automatically started/stopped based on signals from the notifier.
 
 ---
 
-## ⚙️ การตั้งค่า
+## ⚙️ Configuration
 
-ค่าทั้งหมดตั้งได้ใน `.env`:
-
-| ตัวแปร | ค่าเริ่มต้น | คำอธิบาย |
-|--------|------------|---------|
-| `TRADING_PAIRS` | 7 pairs | เหรียญที่เทรด |
-| `CANDLE_INTERVAL` | 4h | timeframe หลัก |
-| `SCAN_INTERVAL_SECONDS` | 900 | scan ทุกกี่วินาที |
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `TRADING_PAIRS` | 7 pairs | Coins to trade |
+| `CANDLE_INTERVAL` | 4h | Primary timeframe |
+| `SCAN_INTERVAL_SECONDS` | 900 | Scan frequency in seconds |
 | `TAKE_PROFIT_PCT` | 8.0 | TP % (fallback) |
 | `STOP_LOSS_PCT` | 4.0 | SL % (fallback) |
-| `MAX_OPEN_TRADES` | 7 | position สูงสุดพร้อมกัน |
-| `MIN_BUY_CONFIDENCE` | 55 | confidence ขั้นต่ำ |
-| `PORTFOLIO_STOP_LOSS_PCT` | 15.0 | หยุดระบบถ้า DD เกิน % |
-| `LIMIT_ORDER_SLIPPAGE_PCT` | 0.1 | limit order ต่ำกว่าตลาด % |
-| `LIMIT_ORDER_TIMEOUT_S` | 30 | timeout ก่อน fallback |
-| `MAX_DAILY_LOSS_PCT` | 5.0 | หยุดเปิดใหม่ถ้าขาดทุน % |
+| `MAX_OPEN_TRADES` | 7 | Maximum simultaneous positions |
+| `MIN_BUY_CONFIDENCE` | 65 | Minimum confidence to buy |
+| `PORTFOLIO_STOP_LOSS_PCT` | 15.0 | Stop system if DD exceeds % |
+| `LIMIT_ORDER_SLIPPAGE_PCT` | 0.1 | Limit order below market % |
+| `LIMIT_ORDER_TIMEOUT_S` | 30 | Timeout before fallback |
+| `MAX_DAILY_LOSS_PCT` | 5.0 | Stop new positions if loss exceeds % |
 
 ---
 
-## 🔄 Flow การตัดสินใจ BUY
+## 🔄 BUY Decision Flow
 
 ```
-1. Portfolio DD > 15%?     → หยุดระบบ
-2. Daily loss >= 5%?       → เช็ค TP/SL เท่านั้น
-3. Regime = BEAR?          → SKIP pair นั้น
-4. MTF 1h+4h = BEAR?       → SKIP pair นั้น
-5. Indicators น่าสนใจ?     → ถ้าไม่ → HOLD (ไม่เรียก Sonnet)
-6. Sonnet วิเคราะห์        → BUY/SELL/HOLD + TP/SL/Trailing
-7. conf >= 55%?            → คำนวณ position size
-8. F&G > 15?               → ส่ง limit order
-9. Limit order fill?       → ตั้ง TP/SL/Trailing dynamic
+1. Portfolio DD > 15%?       → Stop entire system
+2. Daily loss >= 5%?         → Check TP/SL only
+3. Regime = BEAR?            → SKIP this pair
+4. MTF 1h+4h = BEAR?         → SKIP this pair
+5. Indicators interesting?   → If not → HOLD (skip Sonnet)
+6. Sonnet analyzes           → BUY/SELL/HOLD + TP/SL/Trailing
+7. conf >= 65%?              → Calculate position size
+8. F&G > 15?                 → Send limit order
+9. Limit order filled?       → Set dynamic TP/SL/Trailing
 ```
 
 ---
 
 ## 💰 Position Sizing
 
-| Confidence | Multiplier | ตัวอย่าง ($80 base) |
+| Confidence | Multiplier | Example ($80 base) |
 |-----------|-----------|-------------------|
 | 55–64% | 0.5x | $40 |
 | 65–74% | 1.0x | $80 |
 | 75–84% | 1.5x | $120 |
 | 85%+ | 2.0x | $160 |
 
-cap สูงสุด 30% ของ portfolio ต่อ trade
+Maximum cap: 30% of portfolio per trade
 
 ---
 
-## 📊 Backtest
+## 📊 Backtest Results
 
 ```bash
-# รันกับข้อมูลจริงจาก Binance
-python backtest.py --start 2023-01-01 --interval 4h
-
-# เฉพาะบาง pair
-python backtest.py --pairs BTCUSDT ETHUSDT --cash 5000
-
-# ได้ไฟล์ผลลัพธ์
-# backtest_results.json
-# equity_curve.csv
+# Run backtest — compares No Signal vs With Signal modes
+python backtest.py
 ```
+
+Best result: **High_Conf_WithSignal**
+- ATR_TP=4.2 | ATR_SL=2.8 | CONF=0.65
+- ROI = +112.50% | Win Rate = 43.5% | Trades = 588
 
 ---
 
-## 💸 ค่าใช้จ่าย API (ประมาณ)
+## 💸 Estimated API Cost
 
-| Model | การใช้งาน | ค่าใช้จ่าย/เดือน |
-|-------|---------|----------------|
-| Haiku | ดึงข่าว cache 30 นาที | ~$0.04 |
-| Sonnet | ตัดสินใจ trade (4h interval) | ~$4.20 |
-| **รวม** | | **~$4.24/เดือน** |
+| Model | Usage | Cost/Month |
+|-------|-------|------------|
+| Haiku | News filtering (cached 30 min) | ~$0.04 |
+| Sonnet | Trade decisions (4h interval) | ~$4.20 |
+| **Total** | | **~$4.24/month** |
 
 ---
 
 ## 🔒 Security
 
-- API keys เก็บใน `.env` ไม่มีใน code
-- `.env` อยู่ใน `.gitignore` ห้าม push เด็ดขาด
-- ตั้ง IP whitelist ใน Binance dashboard
-- จำกัด permission ให้แค่ Spot trading (ไม่ต้องให้ withdraw)
+- API keys stored in `.env` — never in code
+- `.env` is in `.gitignore` — never push to GitHub
+- IP whitelist configured in Binance dashboard
+- API permission limited to Spot trading only (no withdrawal allowed)
 
 ---
 
-## ⚠️ คำเตือน
+## ⚠️ Disclaimer
 
-ระบบนี้เป็น **experimental** ยังไม่ผ่านการทดสอบในตลาดจริงระยะยาว แนะนำให้:
+This system is **experimental** and has not been tested in live markets long-term.
 
-1. ทดสอบด้วย `TRADE_AMOUNT_USDT=11` (ขั้นต่ำ Binance) ก่อน 2 สัปดาห์
-2. ดู log อย่างสม่ำเสมอ
-3. ไม่ใส่เงินมากกว่าที่รับความเสี่ยงได้
-4. Crypto มีความเสี่ยงสูง ราคาผันผวนมาก
+1. Start with minimum trade size (e.g. $11/trade) for at least 2 weeks
+2. Monitor logs regularly
+3. Never invest more than you can afford to lose
+4. Cryptocurrency trading carries significant risk
 
 ---
 
 ## 📄 License
 
-MIT License — ใช้ได้ฟรี ดัดแปลงได้ แต่ไม่รับผิดชอบต่อความเสียหายที่เกิดจากการใช้งาน
+MIT License — Free to use and modify. No liability for any losses incurred from use of this software.
