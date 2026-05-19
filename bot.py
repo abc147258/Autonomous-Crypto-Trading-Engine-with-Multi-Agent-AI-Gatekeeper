@@ -24,7 +24,7 @@ from lesson_engine import learn_from_loss, log_lesson_summary
 from fear_greed    import get_fear_greed
 STOP_FLAG_FILE = Path("bot.stop")
 
-# ──────────────────── Graceful Shutdown ────────────────────
+# ─── Graceful Shutdown ────────────────────────────────────────
 _shutdown_event = threading.Event()
 _shutdown_reason = ""
 
@@ -33,13 +33,12 @@ def _handle_signal(signum, frame):
     global _shutdown_reason
     sig_name = "SIGINT (Ctrl+C)" if signum == signal.SIGINT else "SIGTERM"
     _shutdown_reason = sig_name
-    logger.warning(f"🛑 Received {sig_name} — Starting graceful shutdown...")
+    logger.warning(f"[STOP] Received {sig_name} — starting graceful shutdown...")
     _shutdown_event.set()
 
 def _interruptible_sleep(seconds: float):
     """
-    Interruptible sleep
-    Stops immediately if shutdown event is set
+    Interruptible sleep — stops immediately if shutdown event is set
     """
     _shutdown_event.wait(timeout=seconds)
 
@@ -48,16 +47,15 @@ def _graceful_exit(trader, state, reason: str = ""):
     Clean bot shutdown:
     1. Save state
     2. Log final summary
-    3. Don't close positions manually (let TP/SL handle on restart)
+    3. Do not close positions (TP/SL will handle on restart)
     """
     logger.info("=" * 60)
     logger.info(f"  🛑 Graceful Shutdown — {reason or 'user request'}")
     logger.info("=" * 60)
 
-    # Summarize open positions
     positions = state.get("positions", {})
     if positions:
-        logger.info(f"  Open positions: {len(positions)} items")
+        logger.info(f"  Open positions: {len(positions)}")
         for sym, pos in positions.items():
             pnl = pos.get("pnl_pct", 0)
             logger.info(
@@ -67,12 +65,11 @@ def _graceful_exit(trader, state, reason: str = ""):
                 f"PnL={pnl:+.2f}%"
             )
         logger.warning(
-            "  ⚠️ Positions still open — bot restart will handle TP/SL"
+            "  [WARN] Positions still open — bot restart will handle TP/SL"
         )
     else:
         logger.info("  No open positions")
 
-    # Summary stats
     s  = state.get("stats", {})
     tt = s.get("total_trades", 0)
     if tt > 0:
@@ -87,12 +84,10 @@ def _graceful_exit(trader, state, reason: str = ""):
     log_lesson_summary()
     save_state(state)
 
-    logger.info("  ✅ State saved — bot stopped safely")
+    logger.info("  [OK] State saved — bot stopped safely")
     logger.info("=" * 60)
 
-
-
-# ──────────────────── Logging ────────────────────
+# ─── Logging ──────────────────────────────────────────────────
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s [%(levelname)s] %(message)s",
@@ -106,34 +101,32 @@ logger = logging.getLogger("ProTradingBot")
 STATE_FILE  = Path("state.json")
 BACKUP_FILE = Path("state_backup.json")
 
-# ──────────────────── Settings ────────────────────
-TRAILING_ACTIVATE_PCT    = 3.0   # Start trailing when profit >= 3%
-TRAILING_DISTANCE_PCT    = 2.5   # SL distance from highest price 2.5%
-MAX_DAILY_LOSS_PCT       = 5.0   # Stop trading if daily loss exceeds 5%
-PORTFOLIO_STOP_LOSS_PCT  = 15.0  # Stop entire system if portfolio drops 15% from peak
-MTF_CACHE_TTL            = 900   # Cache 1h candle for 15 minutes
-MAX_RECONNECT_TRIES      = 5     # Max 5 reconnect attempts
-LIMIT_ORDER_SLIPPAGE_PCT = 0.1   # Limit order 0.1% below market price
-LIMIT_ORDER_TIMEOUT_S    = 30    # Seconds to wait for limit order before cancel
-SL_COOLDOWN_SECONDS      = 900   # 15-minute cooldown after SL hit
-SL_COOLDOWN_OVERRIDE_CONF = 85   # Confidence above this overrides cooldown
-DOWNTREND_MIN_CONF       = 90    # Require conf >= 90% during downtrend
-DOWNTREND_SIZE_MULT      = 0.5   # Reduce position size to 50% in downtrend
+# ─── Settings ─────────────────────────────────────────────────
+TRAILING_ACTIVATE_PCT    = 3.0
+TRAILING_DISTANCE_PCT    = 2.5
+MAX_DAILY_LOSS_PCT       = 5.0
+PORTFOLIO_STOP_LOSS_PCT  = 15.0
+MTF_CACHE_TTL            = 900
+MAX_RECONNECT_TRIES      = 5
+LIMIT_ORDER_SLIPPAGE_PCT = 0.1
+LIMIT_ORDER_TIMEOUT_S    = 30
+SL_COOLDOWN_SECONDS      = 57600  # cooldown 16h after SL (4 × 4h candles from backtest)
+SL_COOLDOWN_OVERRIDE_CONF = 85   # conf above this overrides cooldown
+DOWNTREND_MIN_CONF       = 90
+DOWNTREND_SIZE_MULT      = 0.5
 
-# ──────────────────── ATR-based TP/SL (backtest ROI +112%) ────────────────────
-ATR_TP_MULT              = 4.2   # TP = entry + ATR x 4.2
-ATR_SL_MULT              = 2.8   # SL = entry - ATR x 2.8
+# ── ATR-based TP/SL (backtest ROI +112%) ─────────────────────
+ATR_TP_MULT              = 4.2   # TP = entry + ATR × 4.2
+ATR_SL_MULT              = 2.8   # SL = entry - ATR × 2.8
 
-
-# ──────────────────── State ────────────────────
+# ─── State ────────────────────────────────────────────────────
 def load_state() -> dict:
-    # Try main file first, use backup if corrupted
     for f in [STATE_FILE, BACKUP_FILE]:
         if f.exists():
             try:
                 data = json.loads(f.read_text(encoding="utf-8"))
                 if f == BACKUP_FILE:
-                    logger.warning("Loaded from backup because state.json is corrupted")
+                    logger.warning("Loaded from backup — state.json corrupted")
                 return data
             except Exception:
                 continue
@@ -142,9 +135,7 @@ def load_state() -> dict:
                       "losses": 0, "total_pnl": 0.0},
             "daily": {"date": str(date.today()), "loss_pct": 0.0}}
 
-
 def save_state(state: dict):
-    # Save backup before writing main
     try:
         if STATE_FILE.exists():
             shutil.copy2(STATE_FILE, BACKUP_FILE)
@@ -155,26 +146,23 @@ def save_state(state: dict):
     except Exception as e:
         logger.error(f"save_state error: {e}")
 
-
 def get_daily(state: dict) -> dict:
     """Reset daily stats if new day"""
     today = str(date.today())
     if state.get("daily", {}).get("date") != today:
         state["daily"] = {"date": today, "loss_pct": 0.0}
-return state["daily"]
+    return state["daily"]
 
-
-# ──────────────────── Auto Trade Amount ────────────────────
+# ─── Auto Trade Amount ────────────────────────────────────────
 def get_trade_amount(trader: BinanceTrader, state: dict) -> float:
     """
     Calculate trade amount from total portfolio value
-    = Remaining USDT + value of all open positions
-    Divided equally by MAX_OPEN_TRADES
+    = remaining USDT + value of all open positions
+    divided equally by MAX_OPEN_TRADES
     """
     try:
         usdt_balance = trader.get_usdt_balance()
 
-        # Sum the value of open positions
         position_value = 0.0
         for symbol, pos in state.get("positions", {}).items():
             price = trader.get_price(symbol)
@@ -197,9 +185,7 @@ def get_trade_amount(trader: BinanceTrader, state: dict) -> float:
         logger.error(f"get_trade_amount: {e}")
         return 10.0
 
-
-
-# ──────────────────── Portfolio Stop Loss ────────────────────
+# ─── Portfolio Stop Loss ──────────────────────────────────────
 def check_portfolio_stop(trader: BinanceTrader, state: dict) -> bool:
     try:
         usdt    = trader.get_usdt_balance()
@@ -225,11 +211,10 @@ def check_portfolio_stop(trader: BinanceTrader, state: dict) -> bool:
     except Exception as e:
         logger.error(f"check_portfolio_stop: {e}"); return False
 
-
-# ──────────────────── Limit Order with Fallback ────────────────────
+# ─── Limit Order with Fallback ────────────────────────────────
 def buy_with_limit(trader: BinanceTrader, symbol: str,
                    usdt_amount: float) -> dict | None:
-    """Limit order → fallback market if timeout"""
+    """Limit order with fallback to market on timeout"""
     try:
         import math
         price       = trader.get_price(symbol)
@@ -275,11 +260,10 @@ def buy_with_limit(trader: BinanceTrader, symbol: str,
         logger.error(f"buy_with_limit {symbol}: {e}")
         return trader.buy_market(symbol, usdt_amount)
 
-
-# ──────────────────── Performance Tracker ────────────────────
+# ─── Performance Tracker ──────────────────────────────────────
 def update_performance(state: dict, pnl_pct: float,
                        conf: int, regime: str, exit_type: str):
-    """Save win rate separated by confidence band, regime, exit type"""
+    """Record win rate by confidence band, regime, and exit type"""
     if "performance" not in state:
         state["performance"] = {}
     perf = state["performance"]
@@ -295,7 +279,6 @@ def update_performance(state: dict, pnl_pct: float,
         if pnl_pct >= 0: perf[key]["wins"] += 1
     return state
 
-
 def log_performance_summary(state: dict):
     perf = state.get("performance", {})
     if not perf: return
@@ -307,13 +290,13 @@ def log_performance_summary(state: dict):
         avg = d["total_pnl"]/d["trades"]
         logger.info(f"  [{key:<20}] trades={d['trades']:>4} wr={wr:>5.1f}% avg={avg:>+6.2f}%")
     logger.info("─────────────────────────────────────────────")
-```python
-# ──────────────────── Confidence-based Position Sizing ────────────────────
+
+# ─── Confidence-based Position Sizing ───────────────────────
 def get_position_size(base_amount: float, conf: int,
                       total_portfolio: float) -> float:
     """
-    Higher confidence → larger position size
-    But not exceeding 30% of portfolio per trade
+    Higher confidence = larger position size
+    Max cap: 30% of portfolio per trade
 
     conf 55-64% → 0.5x
     conf 65-74% → 1.0x
@@ -331,21 +314,18 @@ def get_position_size(base_amount: float, conf: int,
 
     amount = base_amount * multiplier
 
-    # cap not exceeding 30% of portfolio
     max_amount = total_portfolio * 0.30
     amount = min(amount, max_amount)
-    amount = max(amount, 10.0)  # minimum $10
+    amount = max(amount, 10.0)
 
     return round(amount, 2)
-
-
 
 def get_trader_with_retry() -> BinanceTrader | None:
     """Create BinanceTrader with retry on connection failure"""
     for attempt in range(1, MAX_RECONNECT_TRIES + 1):
         try:
             trader = BinanceTrader()
-            trader.get_usdt_balance()   # test connection
+            trader.get_usdt_balance()
             if attempt > 1:
                 logger.info(f"Reconnected successfully (attempt {attempt})")
             return trader
@@ -359,8 +339,7 @@ def get_trader_with_retry() -> BinanceTrader | None:
     logger.error("All reconnect attempts failed, stopping bot")
     return None
 
-
-# ──────────────────── MTF Cache ────────────────────
+# ─── MTF Cache ────────────────────────────────────────────────
 _mtf_cache = {}
 
 def get_mtf_data(trader: BinanceTrader, symbol: str) -> tuple[dict, dict]:
@@ -380,8 +359,7 @@ def get_mtf_data(trader: BinanceTrader, symbol: str) -> tuple[dict, dict]:
                 {"regime": "UNKNOWN", "tp_multiplier": 1.0,
                  "sl_multiplier": 1.0, "should_trade": True})
 
-
-# ──────────────────── Dynamic Market Guard ────────────────────
+# ─── Dynamic Market Guard ─────────────────────────────────────
 def is_market_active(symbol, df):
     if df is None or len(df) < 30:
         return False, "Data insufficient"
@@ -399,8 +377,7 @@ def is_market_active(symbol, df):
 
     return True, "Active/Trending"
 
-
-# ──────────────────── Trailing Stop ────────────────────
+# ─── Trailing Stop ────────────────────────────────────────────
 def update_trailing_stop(pos: dict, current_price: float,
                          current_atr: float = 0) -> dict:
     """Trailing SL — dynamic ATR (backtest ROI +112%)"""
@@ -428,8 +405,7 @@ def update_trailing_stop(pos: dict, current_price: float,
             )
     return pos
 
-
-# ──────────────────── TP / SL Check ────────────────────
+# ─── TP / SL Check ────────────────────────────────────────────
 def check_tp_sl(trader: BinanceTrader, state: dict) -> dict:
     to_close = []
 
@@ -447,7 +423,6 @@ def check_tp_sl(trader: BinanceTrader, state: dict) -> dict:
         pos["current_price"] = price
         pos["pnl_pct"]       = round(pnl_pct, 3)
 
-        # Fetch ATR from latest candle for dynamic trailing
         try:
             df_atr = trader.get_candles(symbol)
             from indicators import get_all_indicators
@@ -473,11 +448,8 @@ def check_tp_sl(trader: BinanceTrader, state: dict) -> dict:
             s["total_trades"] += 1
             s["wins"]         += 1 if won else 0
             s["losses"]       += 0 if won else 1
-```
-```python
             s["total_pnl"]    += pnl_pct
 
-            # Update daily loss
             if not won:
                 state["daily"]["loss_pct"] = \
                     state["daily"].get("loss_pct", 0) + abs(pnl_pct)
@@ -488,13 +460,12 @@ def check_tp_sl(trader: BinanceTrader, state: dict) -> dict:
             update_performance(state, pnl_pct, conf_closed,
                                regime_closed, reason)
 
-            # Save SL cooldown
             if reason in ("SL", "TRAIL_SL"):
                 state.setdefault("sl_cooldown_log", {})[symbol] = \
                     datetime.now().isoformat()
-                logger.info(f"  [COOLDOWN] {symbol} cooldown {SL_COOLDOWN_SECONDS//60} minutes")
+                logger.info(f"  [COOLDOWN] {symbol} cooldown {SL_COOLDOWN_SECONDS//3600}h")
 
-                # ──────────────────── AI Lesson Learning ────────────────────
+                # ── AI Lesson Learning ─────────────────────────
                 try:
                     df_learn  = trader.get_candles(symbol)
                     ind_learn = get_all_indicators(df_learn)
@@ -521,8 +492,7 @@ def check_tp_sl(trader: BinanceTrader, state: dict) -> dict:
 
     return state
 
-
-# ──────────────────── Main Loop ────────────────────
+# ─── Main Loop ────────────────────────────────────────────────
 def run_bot():
     logger.info("=" * 60)
     logger.info("  AI Trading Bot [Full Protection Version]")
@@ -531,7 +501,6 @@ def run_bot():
     logger.info(f"  Press Ctrl+C to stop safely")
     logger.info("=" * 60)
 
-    # ──────────────────── Register signal handlers ────────────────────
     signal.signal(signal.SIGINT,  _handle_signal)
     signal.signal(signal.SIGTERM, _handle_signal)
 
@@ -544,60 +513,55 @@ def run_bot():
         state["daily"] = {"date": str(date.today()), "loss_pct": 0.0}
 
     # SL Cooldown tracker
-    sl_cooldown: dict = {}   # symbol → datetime that got SL
+    sl_cooldown: dict = {}
 
     bal = trader.get_usdt_balance()
     logger.info(f"USDT Balance: {bal:.2f} USDT")
-    logger.info(f"Per trade ≈ {bal * 0.95 / MAX_OPEN_TRADES:.2f} USDT")
+    logger.info(f"Per trade approx: {bal * 0.95 / MAX_OPEN_TRADES:.2f} USDT")
 
     while True:
         try:
-	         # ──────────────────── Stop flag (from bot_controller) ────────────────────
             if STOP_FLAG_FILE.exists():
-                logger.info("Stop flag detected — starting graceful shutdown")
+                logger.info("Stop flag found — starting graceful shutdown")
                 _shutdown_event.set()
                 _graceful_exit(trader, state, "stop flag")
                 break
 
-            # Check shutdown event from signal handler
             if _shutdown_event.is_set():
                 _graceful_exit(trader, state, _shutdown_reason)
                 break
-            logger.info(f"--- Scan round {datetime.now().strftime('%H:%M:%S')} ---")
+            logger.info(f"--- Scan {datetime.now().strftime('%H:%M:%S')} ---")
 
-            # ──────────────────── Reconnect if Binance disconnected ────────────────────
             try:
                 trader.get_usdt_balance()
             except Exception:
-                logger.warning("Binance disconnected. Reconnecting...")
+                logger.warning("Binance disconnected, reconnecting...")
                 trader = get_trader_with_retry()
                 if not trader:
                     logger.error("Reconnect failed, waiting 60s then retry")
                     time.sleep(60)
                     continue
 
-            # ──────────────────── Reset daily stats ────────────────────
+            # ── Reset daily stats ──────────────────────────────
             daily = get_daily(state)
 
-            # ──────────────────── Max Daily Loss Guard ────────────────────
+            # ── Max Daily Loss Guard ───────────────────────────
             if daily["loss_pct"] >= MAX_DAILY_LOSS_PCT:
                 logger.warning(
-                    f"[MAX DAILY LOSS] Today loss {daily['loss_pct']:.2f}% "
-                    f">= {MAX_DAILY_LOSS_PCT}% — Stop opening new positions today"
+                    f"[MAX DAILY LOSS] Daily loss {daily['loss_pct']:.2f}% >= {MAX_DAILY_LOSS_PCT}% — stop opening new positions today"
                 )
-                # Still check TP/SL of existing positions but don't open new ones
                 state = check_tp_sl(trader, state)
                 save_state(state)
                 time.sleep(SCAN_INTERVAL_SECONDS)
                 continue
 
-            # ──────────────────── TP/SL Check ────────────────────
+            # ── TP/SL Check ────────────────────────────────────
             state = check_tp_sl(trader, state)
             save_state(state)
 
-            # ──────────────────── Portfolio Stop Loss ────────────────────
+            # ── Portfolio Stop Loss ────────────────────────────
             if check_portfolio_stop(trader, state):
-                logger.critical("Stopping bot due to portfolio drawdown exceeding limit")
+                logger.critical("Stopping bot due to portfolio drawdown limit")
                 save_state(state)
                 break
 
@@ -607,16 +571,14 @@ def run_bot():
                 f"Daily loss: {daily['loss_pct']:.2f}%/{MAX_DAILY_LOSS_PCT}%"
             )
 
-            # ──────────────────── Fear & Greed Index ────────────────────
+            # ── Fear & Greed Index ─────────────────────────
             fg = get_fear_greed()
             logger.info(
                 f"[F&G] {fg['value']}/100 {fg['label']} | {fg['advice']}"
             )
 
-            # ──────────────────── Stage 1: Fetch news (cache 30 minutes) ────────────────────
             news_ctx = get_news_context()
-```
-if news_ctx["should_analyze"]:
+            if news_ctx["should_analyze"]:
                 logger.info(
                     f"[NEWS] ⚡ {news_ctx['sentiment']}({news_ctx['score']:+d}) "
                     f"events={news_ctx['key_events']} risk={news_ctx['risk']}"
@@ -649,7 +611,6 @@ if news_ctx["should_analyze"]:
                     indicators = get_all_indicators(df)
                     decision = analyze_symbol(symbol, indicators, open_pos, news_ctx)
 
-                    # log whether Sonnet was called
                     if decision.get("sonnet_called"):
                         logger.info(
                             f"  [{symbol}] Sonnet → {decision['action']}({decision['confidence']}%) "
@@ -672,11 +633,11 @@ if news_ctx["should_analyze"]:
                         f"1h={mtf['trend']} Regime={regime['regime']}{trail_info}"
                     )
 
-                    # ──────────────────── BUY ────────────────────
+                    # ── BUY ───────────────────────────────────────────
                     if action == "BUY" and conf >= 65 \
                             and not open_pos and mtf["trend"] != "BEAR":
 
-                        # ──────────────────── 1. SL Cooldown check ────────────────────
+                        # ── 1. SL Cooldown check ──────────────────────
                         cooldown_key = state.get("sl_cooldown_log", {}).get(symbol)
                         if cooldown_key:
                             elapsed = (datetime.now() -
@@ -689,16 +650,16 @@ if news_ctx["should_analyze"]:
                                     )
                                     state["sl_cooldown_log"].pop(symbol, None)
                                 else:
-                                    remain = int((SL_COOLDOWN_SECONDS-elapsed)//60)
+                                    remain = int((SL_COOLDOWN_SECONDS-elapsed)//3600)
                                     logger.info(
                                         f"  [{symbol}] BUY blocked — "
-                                        f"cooldown {remain} minutes"
+                                        f"cooldown {remain}h remaining"
                                     )
                                     continue
                             else:
                                 state.get("sl_cooldown_log", {}).pop(symbol, None)
 
-                        # ──────────────────── 2. Downtrend Mode detection ────────────────────
+                        # ── 2. Downtrend Mode detection ───────────────
                         ema9  = indicators.get("ema9",  0)
                         ema21 = indicators.get("ema21", 0)
                         ema50 = indicators.get("ema50", 0)
@@ -717,7 +678,7 @@ if news_ctx["should_analyze"]:
                                 f"conf={conf}% >= {DOWNTREND_MIN_CONF}% passed"
                             )
 
-                        # ──────────────────── F&G filter ────────────────────
+                        # ── F&G filter ────────────────────────────────
                         if fg["value"] <= 15:
                             logger.info(
                                 f"  [SKIP BUY] {symbol} "
@@ -726,109 +687,99 @@ if news_ctx["should_analyze"]:
                             continue
 
                         if open_count < MAX_OPEN_TRADES:
-                            # ──────────────────── Position sizing by confidence ────────────────────
+                            # ── Position sizing by confidence ─────────
                             base_amt  = get_trade_amount(trader, state)
                             total_val = base_amt * MAX_OPEN_TRADES
-```python
-trade_amt = get_position_size(base_amt, conf, total_val)
+                            trade_amt = get_position_size(base_amt, conf, total_val)
 
-# Downtrend mode → reduce size by half
-if is_downtrend:
-    trade_amt = round(trade_amt * DOWNTREND_SIZE_MULT, 2)
-    trade_amt = max(trade_amt, 10.0)
+                            if is_downtrend:
+                                trade_amt = round(trade_amt * DOWNTREND_SIZE_MULT, 2)
+                                trade_amt = max(trade_amt, 10.0)
 
-size_tag = (
-    "2.0x" if conf>=85 else
-    "1.5x" if conf>=75 else
-    "1.0x" if conf>=65 else "0.5x"
-)
-if is_downtrend:
-    size_tag += f" (downtrend ×{DOWNTREND_SIZE_MULT})"
+                            size_tag = (
+                                "2.0x" if conf>=85 else
+                                "1.5x" if conf>=75 else
+                                "1.0x" if conf>=65 else "0.5x"
+                            )
+                            if is_downtrend:
+                                size_tag += f" (downtrend ×{DOWNTREND_SIZE_MULT})"
 
-logger.info(
-    f"  [SIZE] {symbol} conf={conf}% → "
-    f"{size_tag} = ${trade_amt:.2f} USDT"
-)
+                            logger.info(
+                                f"  [SIZE] {symbol} conf={conf}% → "
+                                f"{size_tag} = ${trade_amt:.2f} USDT"
+                            )
 
-result = buy_with_limit(trader, symbol, trade_amt)
-if result:
-    # Combine multiplier from Regime + F&G
-    tp_mult = regime["tp_multiplier"] * fg["tp_mult"]
-    sl_mult = regime["sl_multiplier"] * fg["sl_mult"]
+                            result = buy_with_limit(trader, symbol, trade_amt)
+                            if result:
+                                tp_mult = regime["tp_multiplier"] * fg["tp_mult"]
+                                sl_mult = regime["sl_multiplier"] * fg["sl_mult"]
 
-    # Downtrend mode → tighter sl
-    if is_downtrend:
-        sl_mult = min(sl_mult, 0.8)
+                                if is_downtrend:
+                                    sl_mult = min(sl_mult, 0.8)
 
-    entry      = result["entry_price"]
-    tp_pct_use = decision.get("tp_pct") or TAKE_PROFIT_PCT
-    sl_pct_use = decision.get("sl_pct") or STOP_LOSS_PCT
+                                entry      = result["entry_price"]
+                                tp_pct_use = decision.get("tp_pct") or TAKE_PROFIT_PCT
+                                sl_pct_use = decision.get("sl_pct") or STOP_LOSS_PCT
 
-    # TP/SL from ATR multiplier (backtest ROI +112%)
-    atr_val = decision.get("atr_pct", 0) / 100 * entry
-    if atr_val > 0:
-        result["tp_price"] = round(
-            entry + atr_val * ATR_TP_MULT * tp_mult, 8
-        )
-        result["sl_price"] = round(
-            entry - atr_val * ATR_SL_MULT * sl_mult, 8
-        )
-    else:
-        result["tp_price"] = round(
-            entry * (1 + tp_pct_use / 100 * tp_mult), 8
-        )
-        result["sl_price"] = round(
-            entry * (1 - sl_pct_use / 100 * sl_mult), 8
-        )
+                                atr_val = decision.get("atr_pct", 0) / 100 * entry
+                                if atr_val > 0:
+                                    result["tp_price"] = round(
+                                        entry + atr_val * ATR_TP_MULT * tp_mult, 8
+                                    )
+                                    result["sl_price"] = round(
+                                        entry - atr_val * ATR_SL_MULT * sl_mult, 8
+                                    )
+                                else:
+                                    result["tp_price"] = round(
+                                        entry * (1 + tp_pct_use / 100 * tp_mult), 8
+                                    )
+                                    result["sl_price"] = round(
+                                        entry * (1 - sl_pct_use / 100 * sl_mult), 8
+                                    )
 
-    # ──────────────────── Trailing from Sonnet ────────────────────
-    trail_act  = decision.get("trail_activate") \
-                 or TRAILING_ACTIVATE_PCT
-    trail_dist = decision.get("trail_distance") \
-                 or TRAILING_DISTANCE_PCT
+                                trail_act  = decision.get("trail_activate") \
+                                             or TRAILING_ACTIVATE_PCT
+                                trail_dist = decision.get("trail_distance") \
+                                             or TRAILING_DISTANCE_PCT
 
-    # Downtrend mode → trailing starts faster
-    if is_downtrend:
-        trail_act  = min(trail_act, 1.5)
-        trail_dist = min(trail_dist * sl_mult, trail_act * 0.6)
+                                if is_downtrend:
+                                    trail_act  = min(trail_act, 1.5)
+                                    trail_dist = min(trail_dist * sl_mult, trail_act * 0.6)
 
-    trail_dist = round(trail_dist * sl_mult, 2)
+                                trail_dist = round(trail_dist * sl_mult, 2)
 
-    # ──────────────────── 3. Breakeven Mode ────────────────────
-    # trailing active → SL not lower than entry
-    result["breakeven_mode"]      = True
-    result["highest_price"]       = entry
-    result["trailing_active"]     = False
-    result["trailing_activate"]   = trail_act
-    result["trailing_distance"]   = trail_dist
-    result["regime"]              = regime["regime"]
-    result["mtf_trend"]           = mtf["trend"]
-    result["confidence"]          = conf
-    result["size_multiplier"]     = size_tag
-    result["is_downtrend"]        = is_downtrend
-    state["positions"][symbol]    = result
-    open_count += 1
-    save_state(state)
-    logger.info(
-        f"  BOUGHT {symbol} @ {entry} "
-        f"amt={trade_amt:.2f} USDT ({size_tag}) "
-        f"TP={result['tp_price']}(+{tp_pct_use:.1f}%) "
-        f"SL={result['sl_price']}(-{sl_pct_use:.1f}%) "
-        f"Trail: act={trail_act:.1f}% dist={trail_dist:.1f}% "
-        f"Breakeven=ON"
-    )
+                                # ── 3. Breakeven Mode ─────────────────
+                                result["breakeven_mode"]      = True
+                                result["highest_price"]       = entry
+                                result["trailing_active"]     = False
+                                result["trailing_activate"]   = trail_act
+                                result["trailing_distance"]   = trail_dist
+                                result["regime"]              = regime["regime"]
+                                result["mtf_trend"]           = mtf["trend"]
+                                result["confidence"]          = conf
+                                result["size_multiplier"]     = size_tag
+                                result["is_downtrend"]        = is_downtrend
+                                state["positions"][symbol]    = result
+                                open_count += 1
+                                save_state(state)
+                                logger.info(
+                                    f"  BOUGHT {symbol} @ {entry} "
+                                    f"amt={trade_amt:.2f} USDT ({size_tag}) "
+                                    f"TP={result['tp_price']}(+{tp_pct_use:.1f}%) "
+                                    f"SL={result['sl_price']}(-{sl_pct_use:.1f}%) "
+                                    f"Trail: act={trail_act:.1f}% dist={trail_dist:.1f}% "
+                                    f"Breakeven=ON"
+                                )
 
-# ──────────────────── SELL (AI) ────────────────────
-elif action == "SELL" and open_pos \
-        and conf >= MIN_SELL_CONFIDENCE:
-    if open_pos.get("trailing_active") \
-            and open_pos.get("pnl_pct", 0) < 0:
-        logger.info(f"  [SKIP AI_SELL] {symbol} trailing active")
-    else:
-        result = trader.sell_market(symbol, open_pos["qty"])
-        if result:
-```
-```python
+                    # ── SELL (AI) ─────────────────────────────────────
+                    elif action == "SELL" and open_pos \
+                            and conf >= MIN_SELL_CONFIDENCE:
+                        if open_pos.get("trailing_active") \
+                                and open_pos.get("pnl_pct", 0) < 0:
+                            logger.info(f"  [SKIP AI_SELL] {symbol} trailing active")
+                        else:
+                            result = trader.sell_market(symbol, open_pos["qty"])
+                            if result:
                                 pnl_pct = (
                                     (result["exit_price"] - open_pos["entry_price"])
                                     / open_pos["entry_price"] * 100
@@ -876,7 +827,7 @@ elif action == "SELL" and open_pos \
             log_lesson_summary()
 
             save_state(state)
-            logger.info(f"Sleeping {SCAN_INTERVAL_SECONDS} seconds... (Ctrl+C to stop)")
+            logger.info(f"Sleeping {SCAN_INTERVAL_SECONDS}s... (Ctrl+C to stop)")
             _interruptible_sleep(SCAN_INTERVAL_SECONDS)
 
         except KeyboardInterrupt:
@@ -889,11 +840,8 @@ elif action == "SELL" and open_pos \
                 break
             time.sleep(15)
 
-    # ──────────────────── Check pending shutdown event ────────────────────
     if _shutdown_event.is_set() and state:
         _graceful_exit(trader, state, _shutdown_reason)
 
-
 if __name__ == "__main__":
     run_bot()
-```
