@@ -233,3 +233,6 @@ This system is **experimental** and has not been tested in live markets long-ter
 ## 📄 License
 
 MIT License — Free to use and modify. No liability for any losses incurred from use of this software.
+
+<img width="1891" height="878" alt="image" src="https://github.com/user-attachments/assets/2481432f-695f-46bc-926c-f83a27295b26" />
+
